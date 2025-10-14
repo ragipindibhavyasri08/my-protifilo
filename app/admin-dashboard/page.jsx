@@ -2,26 +2,13 @@
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { JSX } from "react/jsx-dev-runtime";
 
+export const STATIC_WEBSITES = [];
 
-export interface WebsiteResult {
-  id?: number | string;
-  title: string;
-  url: string;
-  snippet: string;
-  favicon?: string;
-  category: string;
-  photos?: string[];
-}
-
-export const STATIC_WEBSITES: WebsiteResult[] = [];
-
-
-export const getWebsitesByCategory = (category: string, list: WebsiteResult[]) =>
+export const getWebsitesByCategory = (category, list) =>
   category === "All" ? list : list.filter((w) => w.category === category);
 
-export const searchWebsites = (query = "", category = "All", list: WebsiteResult[] = STATIC_WEBSITES) => {
+export const searchWebsites = (query = "", category = "All", list = STATIC_WEBSITES) => {
   const websitesToSearch = getWebsitesByCategory(category, list);
   if (!query.trim()) return websitesToSearch;
   const term = query.toLowerCase();
@@ -33,16 +20,6 @@ export const searchWebsites = (query = "", category = "All", list: WebsiteResult
   );
 };
 
-
-type CategoryModalProps = {
-  open: boolean;
-  onClose: () => void;
-  onAdd: (idAndName: string) => void;
-  categories: string[];
-  onEditCategory: (oldTokenOrName: string, newName: string) => Promise<boolean>;
-  onDeleteCategory: (tokenOrName: string) => Promise<boolean>;
-};
-
 function CategoryModal({
   open,
   onClose,
@@ -50,12 +27,12 @@ function CategoryModal({
   categories,
   onEditCategory,
   onDeleteCategory,
-}: CategoryModalProps) {
+}) {
   const [name, setName] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [localList, setLocalList] = useState<string[]>([]);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [localList, setLocalList] = useState([]);
+  const [editingIndex, setEditingIndex] = useState(null);
   const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
@@ -88,7 +65,7 @@ function CategoryModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      let data: any = null;
+      let data = null;
       try {
         data = await resp.json();
       } catch {}
@@ -98,8 +75,8 @@ function CategoryModal({
         setLoading(false);
         return;
       }
-      let id: string | undefined;
-      let returnedName: string = trimmed;
+      let id;
+      let returnedName = trimmed;
       if (data) {
         if (data?.data?.id) id = String(data.data.id);
         else if (data?.id) id = String(data.id);
@@ -110,14 +87,14 @@ function CategoryModal({
       onAdd(token);
       onClose();
       alert(`Category "${returnedName}" added successfully.`);
-    } catch (err: any) {
+    } catch (err) {
       setErr(err?.message ?? "Unexpected error");
     } finally {
       setLoading(false);
     }
   };
 
-  const startEdit = (idx: number) => {
+  const startEdit = (idx) => {
     setEditingIndex(idx);
     const token = localList[idx];
     const label = token.includes("|") ? token.split("|")[1] : token;
@@ -129,7 +106,7 @@ function CategoryModal({
     setEditValue("");
   };
 
-  const saveEdit = async (idx: number) => {
+  const saveEdit = async (idx) => {
     const token = localList[idx];
     const newName = editValue.trim();
     if (!newName) return alert("Name cannot be empty");
@@ -144,7 +121,7 @@ function CategoryModal({
       } else {
         alert("Failed to update category. See console for details.");
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error("saveEdit error:", e);
       alert("Failed to update category.");
     } finally {
@@ -152,7 +129,7 @@ function CategoryModal({
     }
   };
 
-  const deleteItem = async (idx: number) => {
+  const deleteItem = async (idx) => {
     const token = localList[idx];
     if (!confirm(`Delete category "${token.includes("|") ? token.split("|")[1] : token}"? This may orphan websites.`)) return;
     setLoading(true);
@@ -163,7 +140,7 @@ function CategoryModal({
       } else {
         alert("Failed to delete category. See console for details.");
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error("deleteItem error:", e);
       alert("Failed to delete category.");
     } finally {
@@ -245,26 +222,16 @@ function CategoryModal({
   );
 }
 
-
-type AddModalProps = {
-  open: boolean;
-  onClose: () => void;
-  onAdd: (item: WebsiteResult) => void;
-  initialCategory?: string;
-  categories: string[];
-  onOpenCategoryModal: () => void;
-};
-
-function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCategoryModal }: AddModalProps) {
+function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCategoryModal }) {
   const [categoryName, setCategoryName] = useState(initialCategory || "");
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [context, setContext] = useState("");
-  const [faviconPreview, setFaviconPreview] = useState<string | undefined>(undefined);
-  const [faviconFile, setFaviconFile] = useState<File | null>(null);
-  const [photos, setPhotos] = useState<string[]>([]);
-  const [photosFiles, setPhotosFiles] = useState<File[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [faviconPreview, setFaviconPreview] = useState(undefined);
+  const [faviconFile, setFaviconFile] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [photosFiles, setPhotosFiles] = useState([]);
+  const [errors, setErrors] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [capturing, setCapturing] = useState(false);
 
@@ -286,17 +253,17 @@ function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCat
     }
   }, [open, initialCategory]);
 
-  const handlePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotosChange = (e) => {
     const files = e.target.files;
     if (!files) return;
-    const newFiles: File[] = [];
-    const readers: Promise<string>[] = [];
+    const newFiles = [];
+    const readers = [];
     Array.from(files).forEach((file) => {
       newFiles.push(file);
       readers.push(
         new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
+          reader.onload = () => resolve(reader.result);
           reader.onerror = reject;
           reader.readAsDataURL(file);
         })
@@ -310,16 +277,16 @@ function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCat
       .catch((err) => console.error("Error reading photo files:", err));
   };
 
-  const handleFaviconFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFaviconFileChange = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     setFaviconFile(file);
     const reader = new FileReader();
-    reader.onload = () => setFaviconPreview(reader.result as string);
+    reader.onload = () => setFaviconPreview(reader.result);
     reader.readAsDataURL(file);
   };
 
-  const extractIdFromToken = (token?: string) => {
+  const extractIdFromToken = (token) => {
     if (!token) return undefined;
     if (token.includes("|")) {
       const parts = token.split("|");
@@ -328,12 +295,12 @@ function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCat
     }
     return undefined;
   };
-  const getCategoryNameFromToken = (token?: string) => {
+  const getCategoryNameFromToken = (token) => {
     if (!token) return "";
     if (token.includes("|")) return token.split("|").slice(1).join("|").trim();
     return token;
   };
-  const findIdForName = (name?: string) => {
+  const findIdForName = (name) => {
     if (!name) return undefined;
     for (const c of categories) {
       if (c.includes("|")) {
@@ -352,7 +319,7 @@ function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCat
   };
 
   const validateAndSubmit = async () => {
-    const errs: string[] = [];
+    const errs = [];
 
     if (!categoryName.trim()) errs.push("Category name is required.");
     if (!title.trim()) errs.push("Title is required.");
@@ -405,7 +372,7 @@ function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCat
         body: formData,
       });
 
-      let result: any = null;
+      let result = null;
       try {
         result = await resp.json();
       } catch (e) {
@@ -430,7 +397,7 @@ function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCat
       }
 
       const created = result?.data ?? result ?? null;
-      const createdItem: WebsiteResult = {
+      const createdItem = {
         title: created?.title ?? title.trim(),
         url: created?.weburl ?? url.trim(),
         snippet: created?.conext ?? context.trim(),
@@ -443,7 +410,7 @@ function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCat
       onAdd(createdItem);
       onClose();
       alert("Website added successfully.");
-    } catch (err: any) {
+    } catch (err) {
       console.error("AddModal unexpected error:", err);
       setErrors([err?.message ?? "Unexpected error"]);
       alert("Unexpected error: " + (err?.message ?? "unknown"));
@@ -562,7 +529,7 @@ function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCat
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2 border-t">
+          <div className="flex items-center justify-end gap-3	pt-2 border-t">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded-md border" disabled={isSubmitting || capturing}>
               Cancel
             </button>
@@ -576,38 +543,29 @@ function AddModal({ open, onClose, onAdd, initialCategory, categories, onOpenCat
   );
 }
 
-
-type EditWebsiteModalProps = {
-  open: boolean;
-  onClose: () => void;
-  item?: WebsiteResult | null;
-  categories: string[];
-  onConfirm: (updated: WebsiteResult) => void;
-};
-
-function EditWebsiteModal({ open, onClose, item, categories, onConfirm }: EditWebsiteModalProps) {
+function EditWebsiteModal({ open, onClose, item, categories, onConfirm }) {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [snippet, setSnippet] = useState("");
-  const [categoryToken, setCategoryToken] = useState<string>("");
-  const [faviconPreview, setFaviconPreview] = useState<string | undefined>(undefined);
-  const [faviconFile, setFaviconFile] = useState<File | null>(null);
+  const [categoryToken, setCategoryToken] = useState("");
+  const [faviconPreview, setFaviconPreview] = useState(undefined);
+  const [faviconFile, setFaviconFile] = useState(null);
 
-  const [photosPreview, setPhotosPreview] = useState<string[]>([]);
-  const [photosFiles, setPhotosFiles] = useState<File[]>([]);
+  const [photosPreview, setPhotosPreview] = useState([]);
+  const [photosFiles, setPhotosFiles] = useState([]);
 
-  const [photosToRemove, setPhotosToRemove] = useState<string[]>([]);
+  const [photosToRemove, setPhotosToRemove] = useState([]);
   const [faviconRemoved, setFaviconRemoved] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [capturing, setCapturing] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [errors, setErrors] = useState([]);
 
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState({});
 
-  const originalPhotosRef = useRef<string[]>([]);
+  const originalPhotosRef = useRef([]);
 
-  const normalizePhotoPath = (p: string) => {
+  const normalizePhotoPath = (p) => {
     if (!p) return p;
     if (p.startsWith("photos/")) return p;
     try {
@@ -675,7 +633,7 @@ function EditWebsiteModal({ open, onClose, item, categories, onConfirm }: EditWe
     }
   }, [open, item, categories]);
 
-  const extractIdFromToken = (token: string | undefined) => {
+  const extractIdFromToken = (token) => {
     if (!token) return undefined;
     if (token.includes("|")) {
       const parts = token.split("|");
@@ -685,13 +643,13 @@ function EditWebsiteModal({ open, onClose, item, categories, onConfirm }: EditWe
     return undefined;
   };
 
-  const getCategoryNameFromToken = (token: string | undefined) => {
+  const getCategoryNameFromToken = (token) => {
     if (!token) return "";
     if (token.includes("|")) return token.split("|").slice(1).join("|").trim();
     return token;
   };
 
-  const isValidUrl = (u: string) => {
+  const isValidUrl = (u) => {
     if (!u) return false;
     try {
       const parsed = new URL(u);
@@ -701,14 +659,14 @@ function EditWebsiteModal({ open, onClose, item, categories, onConfirm }: EditWe
     }
   };
 
-  const handleFaviconFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFaviconFileChange = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
     setFaviconRemoved(false);
     setFaviconFile(file);
     const reader = new FileReader();
-    reader.onload = () => setFaviconPreview(reader.result as string);
+    reader.onload = () => setFaviconPreview(reader.result);
     reader.readAsDataURL(file);
 
     setFieldErrors((p) => {
@@ -724,17 +682,17 @@ function EditWebsiteModal({ open, onClose, item, categories, onConfirm }: EditWe
     setFaviconRemoved(true);
   };
 
-  const handlePhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotosChange = (e) => {
     const files = e.target.files;
     if (!files) return;
-    const newFiles: File[] = [];
-    const readers: Promise<string>[] = [];
+    const newFiles = [];
+    const readers = [];
     Array.from(files).forEach((file) => {
       newFiles.push(file);
       readers.push(
         new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
+          reader.onload = () => resolve(reader.result);
           reader.onerror = reject;
           reader.readAsDataURL(file);
         })
@@ -756,7 +714,7 @@ function EditWebsiteModal({ open, onClose, item, categories, onConfirm }: EditWe
       .catch((err) => console.error("Error reading photo files:", err));
   };
 
-  const removePhotoAt = (index: number) => {
+  const removePhotoAt = (index) => {
     const originalCount = originalPhotosRef.current.length;
     const previewItem = photosPreview[index];
 
@@ -790,7 +748,7 @@ function EditWebsiteModal({ open, onClose, item, categories, onConfirm }: EditWe
     });
   };
 
-  const clearFieldError = (field: string) => {
+  const clearFieldError = (field) => {
     setFieldErrors((p) => {
       const c = { ...p };
       delete c[field];
@@ -800,8 +758,8 @@ function EditWebsiteModal({ open, onClose, item, categories, onConfirm }: EditWe
   };
 
   const validate = () => {
-    const errs: string[] = [];
-    const fErrs: Record<string, string> = {};
+    const errs = [];
+    const fErrs = {};
 
     if (!title.trim()) {
       fErrs["title"] = "Title is required";
@@ -840,7 +798,7 @@ function EditWebsiteModal({ open, onClose, item, categories, onConfirm }: EditWe
     if (!validate()) return;
     setLoading(true);
     try {
-      const updated: WebsiteResult = {
+      const updated = {
         title: title.trim(),
         url: url.trim(),
         snippet: snippet.trim(),
@@ -1076,15 +1034,7 @@ function EditWebsiteModal({ open, onClose, item, categories, onConfirm }: EditWe
   );
 }
 
-
-type ConfirmDeleteWebsiteModalProps = {
-  open: boolean;
-  onClose: () => void;
-  item?: WebsiteResult | null;
-  onConfirm: () => void;
-};
-
-function ConfirmDeleteWebsiteModal({ open, onClose, item, onConfirm }: ConfirmDeleteWebsiteModalProps) {
+function ConfirmDeleteWebsiteModal({ open, onClose, item, onConfirm }) {
   const [loading, setLoading] = useState(false);
   useEffect(() => {
     if (!open) setLoading(false);
@@ -1108,7 +1058,7 @@ function ConfirmDeleteWebsiteModal({ open, onClose, item, onConfirm }: ConfirmDe
               onClick={async () => {
                 setLoading(true);
                 try {
-                  const id = (item as any)?.id;
+                  const id = item?.id;
                   if (id !== undefined) {
                     try {
                       const resp = await fetch(`https://apirayfogportfolio.nearbydoctors.in/public/api/admin/delete-website/${id}`, {
@@ -1142,59 +1092,54 @@ function ConfirmDeleteWebsiteModal({ open, onClose, item, onConfirm }: ConfirmDe
   );
 }
 
-
-export default function Page(): JSX.Element {
+export default function Page() {
   const router = useRouter();
 
-  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+  const [isAuthed, setIsAuthed] = useState(null);
 
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [activeCategory, setActiveCategory] = useState("All");
 
-  const [list, setList] = useState<WebsiteResult[]>(STATIC_WEBSITES);
+  const [list, setList] = useState(STATIC_WEBSITES);
   const [addOpen, setAddOpen] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-  const [initialCategory, setInitialCategory] = useState<string | undefined>(undefined);
+  const [initialCategory, setInitialCategory] = useState(undefined);
 
-  const [categoriesState, setCategoriesState] = useState<string[]>(() => {
-    const setCat = new Set<string>(["All"]);
+  const [categoriesState, setCategoriesState] = useState(() => {
+    const setCat = new Set(["All"]);
     STATIC_WEBSITES.forEach((w) => setCat.add(w.category));
     return Array.from(setCat);
   });
 
-  const [apiCategories, setApiCategories] = useState<string[]>([]);
+  const [apiCategories, setApiCategories] = useState([]);
   const [apiLoading, setApiLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [addOnlyCategories, setAddOnlyCategories] = useState<string[]>([]);
-  const [websitesLoading, setWebsitesLoading] = useState<boolean>(false);
-  const [websitesError, setWebsitesError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState(null);
+  const [addOnlyCategories, setAddOnlyCategories] = useState([]);
+  const [websitesLoading, setWebsitesLoading] = useState(false);
+  const [websitesError, setWebsitesError] = useState(null);
 
-  
   const [editWebsiteOpen, setEditWebsiteOpen] = useState(false);
-  const [editingWebsite, setEditingWebsite] = useState<WebsiteResult | null>(null);
+  const [editingWebsite, setEditingWebsite] = useState(null);
   const [deleteWebsiteOpen, setDeleteWebsiteOpen] = useState(false);
-  const [deletingWebsite, setDeletingWebsite] = useState<WebsiteResult | null>(null);
+  const [deletingWebsite, setDeletingWebsite] = useState(null);
 
-  
   const [viewWebsiteOpen, setViewWebsiteOpen] = useState(false);
-  const [viewingWebsite, setViewingWebsite] = useState<WebsiteResult | null>(null);
+  const [viewingWebsite, setViewingWebsite] = useState(null);
 
-  
-  const [indices, setIndices] = useState<Record<number, number>>({});
+  const [indices, setIndices] = useState({});
 
   const filtered = useMemo(() => searchWebsites(search, activeCategory, list), [search, activeCategory, list]);
 
   useEffect(() => {
-  const savedCategory = localStorage.getItem("activeCategory");
-  if (savedCategory) {
-    setActiveCategory(savedCategory);
-  }
-}, []);
+    const savedCategory = localStorage.getItem("activeCategory");
+    if (savedCategory) {
+      setActiveCategory(savedCategory);
+    }
+  }, []);
 
-// Save to localStorGE
-useEffect(() => {
-  localStorage.setItem("activeCategory", activeCategory);
-}, [activeCategory]);
+  useEffect(() => {
+    localStorage.setItem("activeCategory", activeCategory);
+  }, [activeCategory]);
 
   useEffect(() => {
     try {
@@ -1215,7 +1160,6 @@ useEffect(() => {
     fetchWebsitesByCategory("All");
   }, [isAuthed]);
 
-  
   async function fetchCategoriesFromApi() {
     setApiLoading(true);
     setApiError(null);
@@ -1232,22 +1176,22 @@ useEffect(() => {
         return;
       }
       const data = await resp.json();
-      let items: any[] = [];
+      let items = [];
       if (Array.isArray(data)) items = data;
       else if (Array.isArray(data?.data)) items = data.data;
       else if (Array.isArray(data?.categories)) items = data.categories;
 
       const tokens = items
-        .map((it: any) => {
+        .map((it) => {
           const id = it?.id ?? it?.categoryId ?? it?.value;
           const name = it?.name ?? it?.title ?? it?.label ?? it?.category ?? String(it);
           if (id !== undefined && id !== null) return `${String(id)}|${String(name)}`;
           return String(name);
         })
-        .filter(Boolean as any) as string[];
+        .filter(Boolean);
 
       setApiCategories((prev) => {
-        const set = new Set<string>([...prev, ...tokens]);
+        const set = new Set([...prev, ...tokens]);
         return Array.from(set);
       });
 
@@ -1259,7 +1203,7 @@ useEffect(() => {
         });
         return copy;
       });
-    } catch (err: any) {
+    } catch (err) {
       setApiError(err?.message ?? "Unexpected error fetching categories");
       setApiCategories([]);
     } finally {
@@ -1267,12 +1211,12 @@ useEffect(() => {
     }
   }
 
-  async function fetchWebsitesByCategory(tokenOrName: string | undefined) {
+  async function fetchWebsitesByCategory(tokenOrName) {
     setWebsitesLoading(true);
     setWebsitesError(null);
 
-    let categoryId: number | undefined;
-    let categoryNameForFilter: string | undefined;
+    let categoryId;
+    let categoryNameForFilter;
 
     if (!tokenOrName || tokenOrName === "All") {
       categoryId = undefined;
@@ -1289,7 +1233,7 @@ useEffect(() => {
 
     const serverEndpoint = "https://apirayfogportfolio.nearbydoctors.in/public/api/admin/list-website";
 
-    const normalizeItem = (it: any): WebsiteResult => {
+    const normalizeItem = (it) => {
       const title = it?.title ?? it?.name ?? it?.label ?? "";
       const url = it?.weburl ?? it?.url ?? it?.website ?? "";
       const favicon = it?.favicon_url ?? it?.favicon ?? it?.faviconUrl ?? undefined;
@@ -1314,7 +1258,7 @@ useEffect(() => {
       };
     };
 
-    const parseListResponse = async (resp: Response) => {
+    const parseListResponse = async (resp) => {
       try {
         const j = await resp.json();
         if (Array.isArray(j)) return j;
@@ -1324,7 +1268,7 @@ useEffect(() => {
         if (Array.isArray(j?.data?.items)) return j.data.items;
         if (Array.isArray(j?.data?.rows)) return j.data.rows;
         for (const k of Object.keys(j)) {
-          if (Array.isArray((j as any)[k])) return (j as any)[k];
+          if (Array.isArray(j[k])) return j[k];
         }
         if (j && typeof j === "object") return [j];
       } catch (jsonErr) {
@@ -1334,7 +1278,7 @@ useEffect(() => {
     };
 
     const buildCandidates = () => {
-      const urls: string[] = [];
+      const urls = [];
       if (categoryId !== undefined) {
         urls.push(`${serverEndpoint}?categoryId=${encodeURIComponent(String(categoryId))}`);
         urls.push(`${serverEndpoint}?category_id=${encodeURIComponent(String(categoryId))}`);
@@ -1369,7 +1313,7 @@ useEffect(() => {
 
         if ((categoryId === undefined && categoryNameForFilter) || candidateUrl === serverEndpoint) {
           if (categoryNameForFilter) {
-            normalized = normalized.filter((it: { category: any }) => (it.category ?? "").trim().toLowerCase() === categoryNameForFilter.trim().toLowerCase());
+            normalized = normalized.filter((it) => (it.category ?? "").trim().toLowerCase() === categoryNameForFilter.trim().toLowerCase());
           }
         }
 
@@ -1392,9 +1336,9 @@ useEffect(() => {
         return;
       }
       const wantedName = tokenOrName.includes("|") ? tokenOrName.split("|").slice(1).join("|").trim() : tokenOrName;
-      const filteredItems2 = allNormalized.filter((it: { category: any }) => (it.category ?? "").trim().toLowerCase() === (wantedName ?? "").trim().toLowerCase());
+      const filteredItems2 = allNormalized.filter((it) => (it.category ?? "").trim().toLowerCase() === (wantedName ?? "").trim().toLowerCase());
       setList(filteredItems2);
-    } catch (finalErr: any) {
+    } catch (finalErr) {
       console.error("Final fallback fetch failed:", finalErr);
       setWebsitesError("Failed to load websites. See console for details.");
     } finally {
@@ -1402,8 +1346,7 @@ useEffect(() => {
     }
   }
 
-  
-  const handleAddConfirm = (item: WebsiteResult) => {
+  const handleAddConfirm = (item) => {
     setList((prev) => [item, ...prev]);
     const cat = item.category?.trim() || "Uncategorized";
     setCategoriesState((prev) => {
@@ -1415,7 +1358,7 @@ useEffect(() => {
     fetchCategoriesFromApi();
   };
 
-  const handleWebsiteEditConfirm = (updated: WebsiteResult) => {
+  const handleWebsiteEditConfirm = (updated) => {
     setList((prev) => {
       const updatedId = updated.id !== undefined ? String(updated.id) : undefined;
 
@@ -1457,7 +1400,7 @@ useEffect(() => {
     setDeleteWebsiteOpen(false);
   };
 
-  const handleAddOnlyCategoryAdd = (tokenOrName: string) => {
+  const handleAddOnlyCategoryAdd = (tokenOrName) => {
     setApiCategories((prev) => {
       const set = new Set(prev);
       set.add(tokenOrName);
@@ -1478,7 +1421,7 @@ useEffect(() => {
   };
 
   const addModalCategories = (() => {
-    const tokensSet = new Set<string>();
+    const tokensSet = new Set();
     apiCategories.forEach((t) => tokensSet.add(t));
     addOnlyCategories.forEach((t) => tokensSet.add(t));
     categoriesState.forEach((name) => {
@@ -1492,7 +1435,7 @@ useEffect(() => {
     return Array.from(tokensSet);
   })();
 
-  const openAddWithCategory = (cat?: string) => {
+  const openAddWithCategory = (cat) => {
     const token = apiCategories.find((t) => (t.includes("|") ? t.split("|")[1] === cat : t === cat)) ?? cat;
     setInitialCategory(token || undefined);
     setAddOpen(true);
@@ -1505,12 +1448,12 @@ useEffect(() => {
     router.replace("/admin");
   };
 
-  function renderChipLabelLocal(c: string) {
+  function renderChipLabelLocal(c) {
     if (!c) return "";
     return c.includes("|") ? c.split("|").slice(1).join("|").trim() : c;
   }
 
-  async function chipOnClick(c: string) {
+  async function chipOnClick(c) {
     const name = c.includes("|") ? c.split("|")[1] : c;
     setActiveCategory(name);
 
@@ -1532,20 +1475,19 @@ useEffect(() => {
     }
   }
 
-  
-  const apiEditCategory = async (oldTokenOrName: string, newName: string) => {
+  const apiEditCategory = async (oldTokenOrName, newName) => {
     try {
-      let id: string | undefined = undefined;
+      let id = undefined;
+
       if (oldTokenOrName && oldTokenOrName.includes("|")) {
         const parts = oldTokenOrName.split("|");
         const maybeId = parts[0].trim();
         if (maybeId) {
-          if (/^\d+$/.test(maybeId)) id = maybeId;
-          else id = maybeId; 
+          id = maybeId;
         }
       }
 
-      let resp: Response;
+      let resp;
       const base = "https://apirayfogportfolio.nearbydoctors.in/public/api/admin";
 
       if (id) {
@@ -1562,7 +1504,7 @@ useEffect(() => {
         });
       }
 
-      let j: any = null;
+      let j = null;
       try {
         j = await resp.json();
       } catch {}
@@ -1619,11 +1561,10 @@ useEffect(() => {
     }
   };
 
-  
-  const apiDeleteCategory = async (tokenOrName: string) => {
+  const apiDeleteCategory = async (tokenOrName) => {
     try {
-      let id: number | null = null;
-      let name: string | null = null;
+      let id = null;
+      let name = null;
 
       if (tokenOrName.includes("|")) {
         const [maybeId, maybeName] = tokenOrName.split("|").map(s => s.trim());
@@ -1669,22 +1610,21 @@ useEffect(() => {
     }
   };
 
-  
-  const galleryRefs = useRef<Record<number, HTMLDivElement | null>>({});
-  const galleryIndex = useRef<Record<number, number>>({});
+  const galleryRefs = useRef({});
+  const galleryIndex = useRef({});
 
-  const ensureIndex = (idx: number) => {
+  const ensureIndex = (idx) => {
     if (galleryIndex.current[idx] === undefined) galleryIndex.current[idx] = 0;
     if (!galleryRefs.current[idx]) galleryRefs.current[idx] = null;
   };
 
-  const setTrackTransformByIndex = (cardIdx: number, idx: number) => {
+  const setTrackTransformByIndex = (cardIdx, idx) => {
     const track = galleryRefs.current[cardIdx];
     if (!track) return;
     const total = Math.max(1, track.children.length);
     const safeIdx = Math.max(0, Math.min(total - 1, idx));
-    (track as HTMLElement).style.transition = "transform 300ms ease";
-    (track as HTMLElement).style.transform = `translateX(-${safeIdx * 100}%)`;
+    track.style.transition = "transform 300ms ease";
+    track.style.transform = `translateX(-${safeIdx * 100}%)`;
     galleryIndex.current[cardIdx] = safeIdx;
 
     setIndices((prev) => {
@@ -1693,7 +1633,7 @@ useEffect(() => {
     });
   };
 
-  const scrollGalleryByStep = (cardIdx: number, step: number) => {
+  const scrollGalleryByStep = (cardIdx, step) => {
     ensureIndex(cardIdx);
     const track = galleryRefs.current[cardIdx];
     if (!track) return;
@@ -1703,18 +1643,18 @@ useEffect(() => {
     setTrackTransformByIndex(cardIdx, next);
   };
 
-  const scrollGalleryToIndex = (cardIdx: number, imageIndex: number) => {
+  const scrollGalleryToIndex = (cardIdx, imageIndex) => {
     ensureIndex(cardIdx);
     setTrackTransformByIndex(cardIdx, imageIndex);
   };
 
-  const attachPointerHandlers = (cardIdx: number, wrapperEl: HTMLDivElement | null) => {
+  const attachPointerHandlers = (cardIdx, wrapperEl) => {
     if (!wrapperEl) return;
-    if ((wrapperEl as any).__pointerAttached) return;
+    if (wrapperEl.__pointerAttached) return;
 
-    const track = wrapperEl.querySelector<HTMLElement>(".rf-slider-track");
+    const track = wrapperEl.querySelector(".rf-slider-track");
     if (!track) {
-      (wrapperEl as any).__pointerAttached = true;
+      wrapperEl.__pointerAttached = true;
       return;
     }
 
@@ -1739,27 +1679,27 @@ useEffect(() => {
       return 0;
     };
 
-    const onPointerDown = (e: PointerEvent) => {
+    const onPointerDown = (e) => {
       if (e.button && e.button !== 0) return;
       dragging = true;
       startX = e.clientX;
       startTranslatePx = getCurrentTranslatePx();
       containerWidth = wrapperEl.clientWidth || 1;
       track.style.transition = "none";
-      try { (wrapperEl as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+      try { wrapperEl.setPointerCapture(e.pointerId); } catch {}
     };
 
-    const onPointerMove = (e: PointerEvent) => {
+    const onPointerMove = (e) => {
       if (!dragging) return;
       const dx = e.clientX - startX;
       const newTx = startTranslatePx + dx;
-      (track as HTMLElement).style.transform = `translateX(${newTx}px)`;
+      track.style.transform = `translateX(${newTx}px)`;
 
       const containerW = containerWidth || (wrapperEl.clientWidth || 1);
       const translatePx = newTx;
       const percent = (-translatePx / containerW) * 100;
       const totalSlides = Math.max(1, track.children.length);
-      const perSlide = 100; 
+      const perSlide = 100;
       const raw = percent / perSlide;
       const liveIdx = Math.max(0, Math.min(totalSlides - 1, Math.round(raw)));
 
@@ -1769,10 +1709,10 @@ useEffect(() => {
       });
     };
 
-    const onPointerUp = (e: PointerEvent) => {
+    const onPointerUp = (e) => {
       if (!dragging) return;
       dragging = false;
-      try { (wrapperEl as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+      try { wrapperEl.releasePointerCapture(e.pointerId); } catch {}
       const finalTx = getCurrentTranslatePx();
       const totalSlides = Math.max(1, track.children.length);
       const percent = (-finalTx / (containerWidth || 1)) * 100;
@@ -1787,7 +1727,7 @@ useEffect(() => {
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     window.addEventListener("pointerup", onPointerUp);
 
-    (wrapperEl as any).__pointerAttached = true;
+    wrapperEl.__pointerAttached = true;
   };
 
   useEffect(() => {
@@ -1814,7 +1754,7 @@ useEffect(() => {
     });
   }, [filtered.length]);
 
-  const findTokenByLabel = (label?: string) => {
+  const findTokenByLabel = (label) => {
     if (!label) return undefined;
     return Array.from(new Set([...apiCategories, ...addOnlyCategories])).find((t) => {
       const lbl = t.includes("|") ? t.split("|")[1] : t;
@@ -1824,13 +1764,12 @@ useEffect(() => {
 
   const gridClass = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3";
 
-  
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxImages, setLightboxImages] = useState([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  const touchStartX = useRef<number | null>(null);
+  const touchStartX = useRef(null);
 
-  const openLightbox = (images: string[], index = 0) => {
+  const openLightbox = (images, index = 0) => {
     if (!images || images.length === 0) return;
     setLightboxImages(images);
     setLightboxIndex(Math.max(0, Math.min(index, images.length - 1)));
@@ -1853,27 +1792,22 @@ useEffect(() => {
   const nextLightbox = () =>
     setLightboxIndex((i) => (i < lightboxImages.length - 1 ? i + 1 : i));
 
-  
   useEffect(() => {
     if (!lightboxOpen) return;
-    const onKey = (e: KeyboardEvent) => {
+    const onKey = (e) => {
       if (e.key === "Escape") closeLightbox();
       if (e.key === "ArrowLeft") prevLightbox();
       if (e.key === "ArrowRight") nextLightbox();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    
   }, [lightboxOpen, lightboxImages.length]);
 
-  
-  const onTouchStart = (e: React.TouchEvent) => {
+  const onTouchStart = (e) => {
     touchStartX.current = e.touches?.[0]?.clientX ?? null;
   };
-  const onTouchMove = (e: React.TouchEvent) => {
-  
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
+  const onTouchMove = (e) => {};
+  const onTouchEnd = (e) => {
     if (touchStartX.current == null) return;
     const endX = e.changedTouches?.[0]?.clientX ?? null;
     if (endX == null) return;
@@ -1884,12 +1818,11 @@ useEffect(() => {
     touchStartX.current = null;
   };
 
- 
-  const renderChipLabel = (c: string) => (c.includes("|") ? c.split("|").slice(1).join("|").trim() : c);
+  const renderChipLabel = (c) => (c.includes("|") ? c.split("|").slice(1).join("|").trim() : c);
 
-  const categoryGradient = (label?: string) => {
+  const categoryGradient = (label) => {
     if (!label) return "from-blue-500 to-indigo-500";
-    const map: Record<string, string> = {
+    const map = {
       All: "from-blue-500 to-indigo-500",
       Technology: "from-green-500 to-emerald-500",
       Business: "from-yellow-500 to-orange-500",
@@ -1916,7 +1849,6 @@ useEffect(() => {
     );
   }
 
-  
   return (
     <div className="min-h-screen bg-white p-6 text-black">
       <style>{`
@@ -2031,7 +1963,7 @@ useEffect(() => {
             const active = label === activeCategory;
             const tokenMatch = findTokenByLabel(label);
 
-            const colorMap: Record<string, string> = {
+            const colorMap = {
               All: "from-blue-500 to-indigo-500",
               Technology: "from-blue-500 to-indigo-500",
               Business: "from-blue-500 to-indigo-500",
@@ -2083,13 +2015,12 @@ useEffect(() => {
                 <div className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 bg-gray-50">
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center shadow-sm">
                     {smallIconSrc ? (
-                      
                       <img
                         src={smallIconSrc}
                         alt={`${item.title} small`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
+                          e.target.style.display = "none";
                         }}
                       />
                     ) : (
@@ -2112,8 +2043,6 @@ useEffect(() => {
                   </div>
 
                   <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center gap-1">
-                    
-                    
                     <button
                       title="Edit website"
                       onClick={(e) => {
@@ -2144,7 +2073,6 @@ useEffect(() => {
                 <div className="p-3">
                   {galleryPhotos.length > 0 ? (
                     <div className="relative">
-                     
                       <button
                         aria-label="Prev"
                         onClick={() => scrollGalleryByStep(idx, -1)}
@@ -2158,7 +2086,7 @@ useEffect(() => {
                       <div
                         ref={(el) => {
                           if (!el) return;
-                          const track = el.querySelector<HTMLDivElement>(".rf-slider-track");
+                          const track = el.querySelector(".rf-slider-track");
                           if (track) galleryRefs.current[idx] = track;
                           attachPointerHandlers(idx, el);
                         }}
@@ -2173,45 +2101,40 @@ useEffect(() => {
                           }}
                         >
                          {galleryPhotos.map((p, i) => (
-  <div
-    key={i}
-    className="flex-shrink-0"
-    style={{
-      flex: "0 0 100%",
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 0,
-    }}
-  >
-   
-    <button
-      type="button"
-      onClick={(e) => { e.stopPropagation(); openLightbox(galleryPhotos, i); }}
-      onPointerDown={(e) => {  e.stopPropagation(); }}
-      className="w-full h-48 rounded-md overflow-hidden p-0 border-0 bg-transparent cursor-pointer"
-      aria-label={`Open image ${i + 1}`}
-      style={{ pointerEvents: "auto" }}
-    >
-      <img
-        src={p}
-        alt={`${item.title} photo ${i}`}
-        className="w-full h-full object-cover"
-        onError={(e) => {
-          (e.target as HTMLImageElement).style.display = "none";
-        }}
-        draggable={false}
-      />
-    </button>
-  </div>
-))}
-
-
-
+                          <div
+                            key={i}
+                            className="flex-shrink-0"
+                            style={{
+                              flex: "0 0 100%",
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
+                              padding: 0,
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); openLightbox(galleryPhotos, i); }}
+                              onPointerDown={(e) => {  e.stopPropagation(); }}
+                              className="w-full h-48 rounded-md overflow-hidden p-0 border-0 bg-transparent cursor-pointer"
+                              aria-label={`Open image ${i + 1}`}
+                              style={{ pointerEvents: "auto" }}
+                            >
+                              <img
+                                src={p}
+                                alt={`${item.title} photo ${i}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.style.display = "none";
+                                }}
+                                draggable={false}
+                              />
+                            </button>
+                          </div>
+                        ))}
                         </div>
                       </div>
 
-                     
                       <button
                         aria-label="Next"
                         onClick={() => scrollGalleryByStep(idx, 1)}
@@ -2241,7 +2164,6 @@ useEffect(() => {
                   )}
                 </div>
 
-              
                 <div className="p-3 flex items-center justify-between gap-3 text-sm text-gray-700">
                   <p
                     className="flex-1 text-gray-600 leading-snug text-sm truncate"
@@ -2273,8 +2195,7 @@ useEffect(() => {
         </div>
       </section>
 
-
-          {lightboxOpen && (
+      {lightboxOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
           role="dialog"
@@ -2284,7 +2205,6 @@ useEffect(() => {
             if (e.target === e.currentTarget) closeLightbox();
           }}
         >
-        
           <div
             className="relative w-full flex items-center justify-center"
             style={{ maxWidth: "50vw", maxHeight: "90vh", minWidth: "320px" }}
@@ -2292,7 +2212,6 @@ useEffect(() => {
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
           >
-            
             <button
               onClick={(e) => { e.stopPropagation(); prevLightbox(); }}
               aria-label="Previous image"
@@ -2302,7 +2221,6 @@ useEffect(() => {
               <span className="text-3xl text-white select-none">‹</span>
             </button>
 
-           
             <button
               onClick={(e) => { e.stopPropagation(); nextLightbox(); }}
               aria-label="Next image"
@@ -2312,7 +2230,6 @@ useEffect(() => {
               <span className="text-3xl text-white select-none">›</span>
             </button>
 
-           
             <button
               onClick={(e) => { e.stopPropagation(); closeLightbox(); }}
               aria-label="Close"
@@ -2322,42 +2239,37 @@ useEffect(() => {
               <span className="text-lg font-bold">✕</span>
             </button>
 
-          
-           {/* Image container */}
-<div
-  className="bg-black flex items-center justify-center rounded-md overflow-hidden"
-  style={{
-    width: "100%",
-    aspectRatio: "1 / 1", 
-    maxHeight: "90vh",
-  }}
-  onClick={(e) => e.stopPropagation()}
->
-  <img
-    src={lightboxImages[lightboxIndex]}
-    alt={`Preview ${lightboxIndex + 1}`}
-    className="w-full h-full object-cover select-none"
-    style={{
-      objectPosition: "center",
-    }}
-    draggable={false}
-  />
-</div>
+            <div
+              className="bg-black flex items-center justify-center rounded-md overflow-hidden"
+              style={{
+                width: "100%",
+                aspectRatio: "1 / 1",
+                maxHeight: "90vh",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={lightboxImages[lightboxIndex]}
+                alt={`Preview ${lightboxIndex + 1}`}
+                className="w-full h-full object-cover select-none"
+                style={{
+                  objectPosition: "center",
+                }}
+                draggable={false}
+              />
+            </div>
 
-
-           
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 text-white text-sm bg-black/40 px-3 py-1 rounded">
               {lightboxIndex + 1} / {lightboxImages.length}
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
 
-function renderChipLabel(c: string) {
+function renderChipLabel(c) {
   if (!c) return "";
   return c.includes("|") ? c.split("|").slice(1).join("|").trim() : c;
 }

@@ -7,27 +7,22 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  
   const VALID_USERNAME = "admin";
   const VALID_PASSWORD = "admin123";
 
-  
   useEffect(() => {
     try {
       const isAuthed = sessionStorage.getItem("isAdminAuthenticated") === "true";
       if (isAuthed) {
         router.replace("/admin-dashboard");
       }
-    } catch {
-      
-    }
-    
+    } catch {}
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -73,7 +68,9 @@ export default function AdminLoginPage() {
 
           <button
             type="submit"
-            className={`w-full py-2 text-white rounded-md shadow ${loading ? "bg-purple-400" : "bg-purple-600 hover:bg-purple-700"}`}
+            className={`w-full py-2 text-white rounded-md shadow ${
+              loading ? "bg-purple-400" : "bg-purple-600 hover:bg-purple-700"
+            }`}
             disabled={loading}
           >
             {loading ? "Signing in..." : "Login"}
