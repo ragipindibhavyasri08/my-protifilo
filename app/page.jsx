@@ -2,21 +2,12 @@
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
 
-export interface WebsiteResult {
-  title: string;
-  url: string;
-  snippet: string;
-  favicon?: string;
-  category: string;
-  photos?: string[];
-}
+export const STATIC_WEBSITES = [];
 
-export const STATIC_WEBSITES: WebsiteResult[] = [];
-
-const renderChipLabel = (c: string) =>
+const renderChipLabel = (c) =>
   c.includes("|") ? c.split("|").slice(1).join("|").trim() : c;
 
-const normalizeApiItem = (it: any): WebsiteResult => {
+const normalizeApiItem = (it) => {
   const title = it?.title ?? it?.name ?? it?.label ?? "";
   const url = it?.weburl ?? it?.url ?? it?.website ?? "";
   const favicon = it?.favicon_url ?? it?.favicon ?? it?.faviconUrl ?? undefined;
@@ -24,7 +15,7 @@ const normalizeApiItem = (it: any): WebsiteResult => {
     it?.conext ?? it?.context ?? it?.snippet ?? it?.description ?? "";
   const category =
     it?.categoryName ?? it?.category_name ?? it?.category ?? it?.cat ?? it?.category ?? "";
-  let photos: string[] = [];
+  let photos = [];
   if (Array.isArray(it?.photos_url)) photos = it.photos_url;
   else if (Array.isArray(it?.photos)) photos = it.photos;
   else if (Array.isArray(it?.images)) photos = it.images;
@@ -42,31 +33,28 @@ const normalizeApiItem = (it: any): WebsiteResult => {
 
 export default function Page() {
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [activeCategory, setActiveCategory] = useState("All");
 
-  const [list, setList] = useState<WebsiteResult[]>(STATIC_WEBSITES);
-  const [apiCategories, setApiCategories] = useState<string[]>([]);
-  const [categoriesState, setCategoriesState] = useState<string[]>(
-    () => {
-      const setCat = new Set<string>(["All"]);
-      STATIC_WEBSITES.forEach((w) => setCat.add(w.category));
-      return Array.from(setCat);
-    }
-  );
+  const [list, setList] = useState(STATIC_WEBSITES);
+  const [apiCategories, setApiCategories] = useState([]);
+  const [categoriesState, setCategoriesState] = useState(() => {
+    const setCat = new Set(["All"]);
+    STATIC_WEBSITES.forEach((w) => setCat.add(w.category));
+    return Array.from(setCat);
+  });
 
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingWebsites, setLoadingWebsites] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
-  const [indices, setIndices] = useState<Record<number, number>>({});
+  const [indices, setIndices] = useState({});
 
   const filtered = useMemo(() => {
     const websitesToSearch =
       activeCategory === "All"
         ? list
         : list.filter(
-            (w) =>
-              (w.category ?? "").toLowerCase() === activeCategory.toLowerCase()
+            (w) => (w.category ?? "").toLowerCase() === activeCategory.toLowerCase()
           );
     if (!search.trim()) return websitesToSearch;
     const term = search.toLowerCase();
@@ -78,7 +66,6 @@ export default function Page() {
     );
   }, [search, activeCategory, list]);
 
-  
   const fetchCategoriesFromApi = async () => {
     setLoadingCategories(true);
     setError(null);
@@ -98,21 +85,19 @@ export default function Page() {
       }
 
       const data = await resp.json();
-      let items: any[] = [];
+      let items = [];
       if (Array.isArray(data)) items = data;
       else if (Array.isArray(data?.data)) items = data.data;
       else if (Array.isArray(data?.categories)) items = data.categories;
 
       const tokens = items
-        .map((it: any) => {
+        .map((it) => {
           const id = it?.id ?? it?.categoryId ?? it?.value;
-          const name =
-            it?.name ?? it?.title ?? it?.label ?? it?.category ?? String(it);
-          if (id !== undefined && id !== null)
-            return `${String(id)}|${String(name)}`;
+          const name = it?.name ?? it?.title ?? it?.label ?? it?.category ?? String(it);
+          if (id !== undefined && id !== null) return `${String(id)}|${String(name)}`;
           return String(name);
         })
-        .filter(Boolean as any) as string[];
+        .filter(Boolean);
 
       const tokensSet = Array.from(new Set([...apiCategories, ...tokens]));
       setApiCategories(tokensSet);
@@ -125,7 +110,7 @@ export default function Page() {
         });
         return Array.from(set);
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("fetchCategoriesFromApi error:", err);
       setError(err?.message ?? "Failed to load categories");
     } finally {
@@ -133,13 +118,12 @@ export default function Page() {
     }
   };
 
- 
-  const fetchWebsitesByCategory = async (tokenOrName?: string) => {
+  const fetchWebsitesByCategory = async (tokenOrName) => {
     setLoadingWebsites(true);
     setError(null);
 
-    let categoryId: number | undefined;
-    let categoryNameForFilter: string | undefined;
+    let categoryId;
+    let categoryNameForFilter;
     if (!tokenOrName || tokenOrName === "All") {
       categoryId = undefined;
       categoryNameForFilter = undefined;
@@ -156,7 +140,7 @@ export default function Page() {
     const serverEndpoint =
       "https://apirayfogportfolio.nearbydoctors.in/public/api/admin/list-website";
 
-    const parseListResponse = async (resp: Response) => {
+    const parseListResponse = async (resp) => {
       try {
         const j = await resp.json();
         if (Array.isArray(j)) return j;
@@ -166,7 +150,7 @@ export default function Page() {
         if (Array.isArray(j?.data?.items)) return j.data.items;
         if (Array.isArray(j?.data?.rows)) return j.data.rows;
         for (const k of Object.keys(j)) {
-          if (Array.isArray((j as any)[k])) return (j as any)[k];
+          if (Array.isArray(j[k])) return j[k];
         }
         if (j && typeof j === "object") return [j];
       } catch (jsonErr) {
@@ -176,7 +160,7 @@ export default function Page() {
     };
 
     const buildCandidates = () => {
-      const urls: string[] = [];
+      const urls = [];
       if (categoryId !== undefined) {
         urls.push(
           `${serverEndpoint}?categoryId=${encodeURIComponent(String(categoryId))}`
@@ -190,14 +174,10 @@ export default function Page() {
       }
       if (categoryNameForFilter) {
         urls.push(
-          `${serverEndpoint}?category=${encodeURIComponent(
-            categoryNameForFilter
-          )}`
+          `${serverEndpoint}?category=${encodeURIComponent(categoryNameForFilter)}`
         );
         urls.push(
-          `${serverEndpoint}?categoryName=${encodeURIComponent(
-            categoryNameForFilter
-          )}`
+          `${serverEndpoint}?categoryName=${encodeURIComponent(categoryNameForFilter)}`
         );
         urls.push(`${serverEndpoint}?cat=${encodeURIComponent(categoryNameForFilter)}`);
       }
@@ -221,12 +201,11 @@ export default function Page() {
         if (!rawItems || rawItems.length === 0) {
           continue;
         }
-        let normalized = rawItems.map((r: any) => normalizeApiItem(r));
+        let normalized = rawItems.map((r) => normalizeApiItem(r));
         if (!categoryId && categoryNameForFilter) {
           normalized = normalized.filter(
-            (it: { category: any }) =>
-              (it.category ?? "").toLowerCase() ===
-              categoryNameForFilter.toLowerCase()
+            (it) =>
+              (it.category ?? "").toLowerCase() === categoryNameForFilter.toLowerCase()
           );
         }
         setList(normalized.length ? normalized : STATIC_WEBSITES);
@@ -249,7 +228,7 @@ export default function Page() {
         return;
       }
       const allRaw = await parseListResponse(respAll);
-      const allNormalized = (allRaw || []).map((r: any) => normalizeApiItem(r));
+      const allNormalized = (allRaw || []).map((r) => normalizeApiItem(r));
       if (!tokenOrName || tokenOrName === "All") {
         setList(allNormalized.length ? allNormalized : STATIC_WEBSITES);
       } else {
@@ -257,8 +236,7 @@ export default function Page() {
           ? tokenOrName.split("|").slice(1).join("|").trim()
           : tokenOrName;
         const filteredItems = allNormalized.filter(
-          (it: { category: any }) =>
-            (it.category ?? "").toLowerCase() === (wantedName ?? "").toLowerCase()
+          (it) => (it.category ?? "").toLowerCase() === (wantedName ?? "").toLowerCase()
         );
         setList(filteredItems.length ? filteredItems : STATIC_WEBSITES);
       }
@@ -274,31 +252,26 @@ export default function Page() {
   useEffect(() => {
     fetchCategoriesFromApi();
     fetchWebsitesByCategory("All");
-    
   }, []);
 
-  
-  const galleryRefs = useRef<Record<number, HTMLDivElement | null>>({});
-  const galleryIndex = useRef<Record<number, number>>({});
+  const galleryRefs = useRef({});
+  const galleryIndex = useRef({});
 
-  const dragState = useRef<Record<
-    number,
-    { dragging: boolean; startX: number; startIndex: number }
-  >>({});
+  const dragState = useRef({});
 
-  const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  const ensureIndex = (idx: number) => {
+  const ensureIndex = (idx) => {
     if (galleryIndex.current[idx] === undefined) galleryIndex.current[idx] = 0;
     if (!dragState.current[idx]) {
       dragState.current[idx] = { dragging: false, startX: 0, startIndex: 0 };
     }
   };
 
-  const setTrackTransformByIndex = (cardIdx: number, idx: number) => {
+  const setTrackTransformByIndex = (cardIdx, idx) => {
     const el = galleryRefs.current[cardIdx];
     if (!el) return;
-    const track = el.querySelector<HTMLElement>(".rf-slider-track");
+    const track = el.querySelector(".rf-slider-track");
     if (!track) return;
     const total = track.children.length || 1;
     const percentPer = 100 / total;
@@ -310,52 +283,51 @@ export default function Page() {
     setIndices((prev) => ({ ...prev, [cardIdx]: safeIdx }));
   };
 
-  const scrollGalleryToIndex = (cardIdx: number, imageIndex: number) => {
+  const scrollGalleryToIndex = (cardIdx, imageIndex) => {
     ensureIndex(cardIdx);
     setTrackTransformByIndex(cardIdx, imageIndex);
   };
 
-  const scrollGalleryByStep = (cardIdx: number, step: number) => {
+  const scrollGalleryByStep = (cardIdx, step) => {
     ensureIndex(cardIdx);
     const current = galleryIndex.current[cardIdx] ?? 0;
     const el = galleryRefs.current[cardIdx];
     if (!el) return;
-    const track = el.querySelector<HTMLElement>(".rf-slider-track");
+    const track = el.querySelector(".rf-slider-track");
     if (!track) return;
     const total = track.children.length || 1;
     const next = clamp(current + step, 0, total - 1);
     setTrackTransformByIndex(cardIdx, next);
   };
 
-  const attachPointerHandlers = (cardIdx: number, el: HTMLDivElement | null) => {
+  const attachPointerHandlers = (cardIdx, el) => {
     if (!el) return;
-    if ((el as any).__pointerAttached) return;
+    if (el.__pointerAttached) return;
 
-    const track = el.querySelector<HTMLElement>(".rf-slider-track");
+    const track = el.querySelector(".rf-slider-track");
     if (!track) {
-      (el as any).__pointerAttached = true;
+      el.__pointerAttached = true;
       return;
     }
 
     ensureIndex(cardIdx);
 
-    const onPointerDown = (e: PointerEvent) => {
-      
-      const target = (e.target as HTMLElement);
+    const onPointerDown = (e) => {
+      const target = e.target;
       if (target && typeof target.closest === "function" && target.closest("button")) {
         return;
       }
-      if ((e as PointerEvent).button && (e as PointerEvent).button !== 0) return;
+      if (e.button && e.button !== 0) return;
       dragState.current[cardIdx].dragging = true;
       dragState.current[cardIdx].startX = e.clientX;
       dragState.current[cardIdx].startIndex = galleryIndex.current[cardIdx] ?? 0;
       track.style.transition = "none";
       try {
-        (el as HTMLElement).setPointerCapture(e.pointerId);
+        el.setPointerCapture(e.pointerId);
       } catch {}
     };
 
-    const onPointerMove = (e: PointerEvent) => {
+    const onPointerMove = (e) => {
       if (!dragState.current[cardIdx].dragging) return;
       const dx = e.clientX - dragState.current[cardIdx].startX;
       const containerWidth = el.clientWidth || 1;
@@ -374,11 +346,11 @@ export default function Page() {
       });
     };
 
-    const onPointerUp = (e: PointerEvent) => {
+    const onPointerUp = (e) => {
       if (!dragState.current[cardIdx].dragging) return;
       dragState.current[cardIdx].dragging = false;
       try {
-        (el as HTMLElement).releasePointerCapture(e.pointerId);
+        el.releasePointerCapture(e.pointerId);
       } catch {}
       const containerWidth = el.clientWidth || 1;
       const style = window.getComputedStyle(track);
@@ -405,7 +377,7 @@ export default function Page() {
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
 
-    (el as any).__pointerAttached = true;
+    el.__pointerAttached = true;
   };
 
   useEffect(() => {
@@ -414,7 +386,7 @@ export default function Page() {
         const idx = Number(k);
         const el = galleryRefs.current[idx];
         if (!el) return;
-        const track = el.querySelector<HTMLElement>(".rf-slider-track");
+        const track = el.querySelector(".rf-slider-track");
         if (!track) return;
         const current = galleryIndex.current[idx] ?? 0;
         track.style.transition = "none";
@@ -437,7 +409,7 @@ export default function Page() {
     });
   }, [filtered.length]);
 
-  const onCategoryClick = async (c: string) => {
+  const onCategoryClick = async (c) => {
     const name = c.includes("|") ? c.split("|").slice(1).join("|").trim() : c;
     setActiveCategory(name);
     const matchingToken = apiCategories.find((t) => {
@@ -448,10 +420,9 @@ export default function Page() {
     await fetchWebsitesByCategory(tokenOrName);
   };
 
- 
-  const categoryGradient = (label?: string) => {
+  const categoryGradient = (label) => {
     if (!label) return "from-blue-500 to-indigo-500";
-    const map: Record<string, string> = {
+    const map = {
       All: "from-blue-500 to-indigo-500",
       Technology: "from-green-500 to-emerald-500",
       Business: "from-yellow-500 to-orange-500",
@@ -462,27 +433,23 @@ export default function Page() {
     return map[label] ?? "from-blue-500 to-purple-500";
   };
 
-  
-  // Lightbox (modal) state
- 
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxImages, setLightboxImages] = useState([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  const touchStartX = useRef<number | null>(null);
+  const touchStartX = useRef(null);
 
-   useEffect(() => {
+  useEffect(() => {
     const savedCategory = localStorage.getItem("activeCategory");
     if (savedCategory) {
       setActiveCategory(savedCategory);
     }
   }, []);
-  
-  // Save to localStorage
+
   useEffect(() => {
     localStorage.setItem("activeCategory", activeCategory);
   }, [activeCategory]);
 
-  const openLightbox = (images: string[], index = 0) => {
+  const openLightbox = (images, index = 0) => {
     if (!images || images.length === 0) return;
     setLightboxImages(images);
     setLightboxIndex(Math.max(0, Math.min(index, images.length - 1)));
@@ -500,32 +467,27 @@ export default function Page() {
     }, 200);
   };
 
-  const prevLightbox = () =>
-    setLightboxIndex((i) => (i > 0 ? i - 1 : i));
-  const nextLightbox = () =>
-    setLightboxIndex((i) => (i < lightboxImages.length - 1 ? i + 1 : i));
+  const prevLightbox = () => setLightboxIndex((i) => (i > 0 ? i - 1 : i));
+  const nextLightbox = () => setLightboxIndex((i) => (i < lightboxImages.length - 1 ? i + 1 : i));
 
-  
   useEffect(() => {
     if (!lightboxOpen) return;
-    const onKey = (e: KeyboardEvent) => {
+    const onKey = (e) => {
       if (e.key === "Escape") closeLightbox();
       if (e.key === "ArrowLeft") prevLightbox();
       if (e.key === "ArrowRight") nextLightbox();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    
   }, [lightboxOpen, lightboxImages.length]);
 
- 
-  const onTouchStart = (e: React.TouchEvent) => {
+  const onTouchStart = (e) => {
     touchStartX.current = e.touches?.[0]?.clientX ?? null;
   };
-  const onTouchMove = (e: React.TouchEvent) => {
+  const onTouchMove = (e) => {
     e.preventDefault();
   };
-  const onTouchEnd = (e: React.TouchEvent) => {
+  const onTouchEnd = (e) => {
     if (touchStartX.current == null) return;
     const endX = e.changedTouches?.[0]?.clientX ?? null;
     if (endX == null) return;
@@ -556,18 +518,15 @@ export default function Page() {
           border-radius: 999px;
         }
 
-        /* Hover effect a little stronger */
         .overflow-auto:hover::-webkit-scrollbar-thumb, .category-scroll:hover::-webkit-scrollbar-thumb {
           background: linear-gradient(90deg, #2563eb 0%, #6d28d9 100%);
         }
 
-        /* Firefox */
         .overflow-auto, .category-scroll {
           scrollbar-width: thin;
           scrollbar-color: rgba(59,130,246,0.9) transparent;
         }
 
-        /* small visual gap between chips and scrollbar */
         .category-scroll {
           -webkit-overflow-scrolling: touch;
           overflow-x: auto;
@@ -578,11 +537,9 @@ export default function Page() {
 
         .modal-scroll { max-height: 70vh; overflow:auto; }
 
-        /* hide visible scrollbar but keep scrolling/swiping functionality */
         .category-scroll::-webkit-scrollbar { display: none; }
         .category-scroll { scrollbar-width: none; -ms-overflow-style: none; -ms-overflow-style: none; }
 
-        /* Ensure the chips stay on a single row and can be swiped */
         .category-scroll > div { display: flex; gap: 12px; align-items: center; }
       `}</style>
 
@@ -624,7 +581,6 @@ export default function Page() {
         </div>
       </header>
 
-    
       <div className="mb-6 category-scroll" role="navigation" aria-label="Categories">
         <div className="flex gap-3 items-center px-3">
           {categoriesState.map((c) => {
@@ -695,9 +651,7 @@ export default function Page() {
                         <button
                           aria-label="Prev"
                           onClick={() => scrollGalleryByStep(idx, -1)}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center 
-             bg-white/90 rounded-full shadow-md opacity-15 hover:opacity-100 
-             transition-all duration-300 hover:scale-110 group-hover:opacity-100"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center bg-white/90 rounded-full shadow-md opacity-15 hover:opacity-100 transition-all duration-300 hover:scale-110 group-hover:opacity-100"
                         >
                           <span className="text-lg font-bold text-gray-700">‹</span>
                         </button>
@@ -730,7 +684,6 @@ export default function Page() {
                                   alignItems: "center",
                                 }}
                               >
-                                {/* Button wrapper  */}
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); openLightbox(photos, i); }}
@@ -742,7 +695,7 @@ export default function Page() {
                                     alt={`${item.title} photo ${i}`}
                                     className="w-full h-full object-cover rounded-md select-none pointer-events-auto"
                                     style={{ aspectRatio: "16/9", objectPosition: "center" }}
-                                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                    onError={(e) => { e.target.style.display = "none"; }}
                                     draggable={false}
                                   />
                                 </button>
@@ -754,9 +707,7 @@ export default function Page() {
                         <button
                           aria-label="Next"
                           onClick={() => scrollGalleryByStep(idx, 1)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center 
-             bg-white/90 rounded-full shadow-md opacity-15 hover:opacity-100 
-             transition-all duration-300 hover:scale-110 group-hover:opacity-100"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 flex items-center justify-center bg-white/90 rounded-full shadow-md opacity-15 hover:opacity-100 transition-all duration-300 hover:scale-110 group-hover:opacity-100"
                         >
                           <span className="text-lg font-bold text-gray-700">›</span>
                         </button>
@@ -788,7 +739,7 @@ export default function Page() {
                             alt={`${item.title} preview`}
                             className="w-full h-full object-cover rounded-md select-none pointer-events-auto"
                             style={{ aspectRatio: "16/9", objectPosition: "center" }}
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                            onError={(e) => { e.target.style.display = "none"; }}
                             draggable={false}
                           />
                         </button>
@@ -798,7 +749,6 @@ export default function Page() {
 
                   {/* Description + Category in one row */}
                   <div className="p-3 flex items-center justify-between gap-3 text-sm text-gray-700">
-                    
                     <p
                       className="flex-1 text-gray-600 leading-snug text-sm truncate"
                       style={{
@@ -811,16 +761,13 @@ export default function Page() {
                       {item.snippet || "No description available."}
                     </p>
 
-                  
                     {item.category && (
                       <span
                         className={`shrink-0 inline-block px-3 py-1 text-xs font-medium rounded-full text-white`}
                         style={{
-
                           background: `linear-gradient(90deg, var(--from), var(--to))`,
-                        } as React.CSSProperties}
+                        }}
                       >
-
                         <span className="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full">
                           {item.category}
                         </span>
@@ -848,7 +795,6 @@ export default function Page() {
             if (e.target === e.currentTarget) closeLightbox();
           }}
         >
-         
           <div
             className="relative w-full flex items-center justify-center"
             style={{ maxWidth: "50vw", maxHeight: "90vh", minWidth: "320px" }}
@@ -856,7 +802,6 @@ export default function Page() {
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
           >
-         
             <button
               onClick={(e) => { e.stopPropagation(); prevLightbox(); }}
               aria-label="Previous image"
@@ -866,7 +811,6 @@ export default function Page() {
               <span className="text-3xl text-white select-none">‹</span>
             </button>
 
-           
             <button
               onClick={(e) => { e.stopPropagation(); nextLightbox(); }}
               aria-label="Next image"
@@ -876,7 +820,6 @@ export default function Page() {
               <span className="text-3xl text-white select-none">›</span>
             </button>
 
-           
             <button
               onClick={(e) => { e.stopPropagation(); closeLightbox(); }}
               aria-label="Close"
@@ -886,30 +829,26 @@ export default function Page() {
               <span className="text-lg font-bold">✕</span>
             </button>
 
-          
-          
-<div
-  className="bg-black flex items-center justify-center rounded-md overflow-hidden"
-  style={{
-    width: "100%",
-    aspectRatio: "1 / 1", 
-    maxHeight: "90vh",
-  }}
-  onClick={(e) => e.stopPropagation()}
->
-  <img
-    src={lightboxImages[lightboxIndex]}
-    alt={`Preview ${lightboxIndex + 1}`}
-    className="w-full h-full object-cover select-none"
-    style={{
-      objectPosition: "center",
-    }}
-    draggable={false}
-  />
-</div>
+            <div
+              className="bg-black flex items-center justify-center rounded-md overflow-hidden"
+              style={{
+                width: "100%",
+                aspectRatio: "1 / 1",
+                maxHeight: "90vh",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={lightboxImages[lightboxIndex]}
+                alt={`Preview ${lightboxIndex + 1}`}
+                className="w-full h-full object-cover select-none"
+                style={{
+                  objectPosition: "center",
+                }}
+                draggable={false}
+              />
+            </div>
 
-
-            
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-50 text-white text-sm bg-black/40 px-3 py-1 rounded">
               {lightboxIndex + 1} / {lightboxImages.length}
             </div>
